@@ -35,7 +35,7 @@
         }
     }
 
-    let openUpdateRequests = ["Test1"];
+    let openUpdateRequests = [];
     let language = SETTINGS.default.language;
     let style = document.createElement("style");
     style.type = "text/css";

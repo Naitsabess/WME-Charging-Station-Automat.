@@ -58,13 +58,24 @@
     // -------------------------- Variables needed for functionality -------------------------
     let tabLabel, tabPane;
 
-    let mapScanResult = null;
+    let mapScanResult = null; // Not yet used
     let chargingStationsInView = [];
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
     let language = SETTINGS.default.language;
 
     // -------------------------- Functions --------------------------------------------------
+
+    function loadPopup() {
+        let popup = document.getElementById("TEST-popup");
+        if(!popup) {
+            popup = document.createElement("div");
+            popup.id = "TEST-popup";
+            popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
+            popup.innerHTML = `<h2>Edit Panel TEST</h>`;
+            document.getElementsByTagName("body")[0].append(popup);
+        }
+    }
 
     function loadResultsSidebar() {
         DEBUG && console.log(SCRIPT_NAME + ": Loading results sidebar...");
@@ -77,7 +88,6 @@
         resultsSidebar = document.createElement("div");
         resultsSidebar.id = "results-sidebar-state";
         tabPane.appendChild(resultsSidebar);
-
         const networksFilter = document.createElement("fieldset");
         networksFilter.style = "margin-bottom: 30px;";
         resultsSidebar.appendChild(networksFilter);
@@ -85,22 +95,33 @@
         const selectNetwork = document.createElement("select");
         selectNetwork.id = "select-network";
         selectNetwork.name = "provider";
-        selectNetwork.style = "margin-right: 30px; padding: 2px 0; text-align: center";
+        selectNetwork.style = "width: 190px; margin-right: 10px; padding: 2px 0; text-align: center";
         networksFilter.appendChild(selectNetwork);
         selectNetwork.innerHTML = `<option value="default">${STRINGS[language].choose_network}</option>`;
         for (let i = 0; i < chargingStationNetworks.length; i++) {
             selectNetwork.innerHTML += `<option value="${chargingStationNetworks[i]}">${chargingStationNetworks[i]}</option>`;
         }
 
-        const startEditButton = document.createElement("button");
-        startEditButton.id ="start-edit-button";
+        const startEditButton = document.createElement("wz-button");
+        startEditButton.id = "start-edit-button";
+        startEditButton.style = "size: sm";
         startEditButton.innerText = STRINGS[language].start_edit_all;
-        //startEditButton.addEventListener("click",
+        startEditButton.addEventListener("click", () => {
+
+            W.accelerators.addAction(W.accelerators.Actions.toggleUpdateRequest);
+            console.dir(chargingStationsWithUpdateRequests);
+            chargingStationsWithUpdateRequests[0].attributes.venueUpdateRequests.pop();
+            console.log("Actions:");
+            console.dir(W.model.actionManager.getActions());
+            console.log(W.model.actionManager.getActionsNum());
+            loadPopup();
+            //chargingStationsWithUpdateRequests[0].getVenueUpdateRequests()[0].setApproved(true);
+        })
         networksFilter.appendChild(startEditButton);
 
         const rescanButton = document.createElement("button");
         rescanButton.innerText = STRINGS[language].scan_again;
-        rescanButton.style = "border: none";
+        rescanButton.style = "background-color: none; border: none";
         rescanButton.addEventListener("click", () => {
             if(mapScan()) {
                 loadResultsSidebar();
@@ -138,7 +159,7 @@
             `</tbody>
             </table>`;
         resultsTable.innerHTML = tableHTML;
-        DEBUG && console.log(SCRIPT_NAME + ": Results sidebar successfully loaded!");
+        DEBUG && console.log(SCRIPT_NAME + ": Results sidebar loaded successfully!");
 
         // ------------------------------- End drawing the result table ---------------------------------------------------
     }
@@ -157,7 +178,7 @@
 
         chargingStationsInView = W.model.venues.getObjectArray().filter(obj => obj.isChargingStation() && obj.outOfScope === false);
         chargingStationNetworks = chargingStationsInView.map(obj => obj.attributes.categoryAttributes.CHARGING_STATION.network).filter((obj, index, array) => array.indexOf(obj) === index);
-        chargingStationsWithUpdateRequests = chargingStationsInView.filter(obj => !obj.hasUpdateRequests());
+        chargingStationsWithUpdateRequests = chargingStationsInView.filter(obj => obj.hasUpdateRequests());
 
         if (chargingStationsInView.length > 0) {
             DEBUG && console.log(SCRIPT_NAME + ": Map scan completed. Results found: ");
@@ -170,7 +191,7 @@
             return false;
         }
     }
-
+    // deprecated
     /*function scanButtonBehavior() {
         const defaultSidebar = document.getElementById("default-sidebar-state");
         const resultsSidebar = document.getElementById("results-sidebar-state");
@@ -262,7 +283,6 @@
 
             loadDefaultSidebar();
             DEBUG && console.log(SCRIPT_NAME + ": Initialized");
-            DEBUG && console.dir(W.model.venues); //test only
         })
     }
 

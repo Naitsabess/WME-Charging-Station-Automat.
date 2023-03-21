@@ -2,7 +2,7 @@
 // @name         WME Charging-Station-Automat.
 // @version      v0.1
 // @namespace    http://tampermonkey.net/
-// @description  Scans screen for open charaging station PURs
+// @description  Scans screen for open EVCS PURs and lets you edit multiple PURs in one panel by provider
 // @author       FasterinoSpeederino
 // @match        *.waze.com/*editor*
 // @exclude      *.waze.com/*user/editor
@@ -25,6 +25,8 @@
     const SCRIPT_NAME = GM_info.script.name;
     const SCRIPT_VERSION = GM_info.script.version;
     const SCRIPT_AUTHOR = GM_info.script.author;
+    const GREASYFORK_LINK = "";
+    const FORUM_LINK = "";
     const RELEASE_NOTES = "Initial version of the script";
     const DEBUG = true;
     const SETTINGS = {
@@ -34,35 +36,41 @@
     }
     const STRINGS = {
         "en": {
-            scan_area: "Scan area",
-            no_results_found: "No results found",
-            choose_network: "Choose network",
             charging_stations_found: "Charging stations found",
+            choose_network: "Choose network",
+            edit: "Edit",
+            network: "Network",
+            no_results_found: "No results found",
+            scan_again: "Scan again",
+            scan_area: "Scan area",
+            start_edit_all: "edit all",
             venue_no_name: "No name",
             venue_no_street_name: "No street",
-            start_edit_all: "edit all",
-            scan_again: "scan again"
         },
         "de": {
-            scan_area: "Suche im Gebiet",
-            no_results_found: "Keine Ergebnisse",
-            choose_network: "Wähle Betreiber",
             charging_stations_found: "Ladestationen gefunden",
+            choose_network: "Wähle Betreiber",
+            edit: "Bearbeiten",
+            network: "Betreiber",
+            no_results_found: "Keine Ergebnisse",
+            scan_again: "Suche erneut",
+            scan_area: "Suche im Gebiet",
+            start_edit_all: "alle bearbeiten",
             venue_no_name: "Ohne Name",
             venue_no_street_name: "keine Straße",
-            start_edit_all: "alle bearbeiten",
-            scan_again: "scanne erneut"
         }
     }
 
     // -------------------------- Variables needed for functionality -------------------------
-    let tabLabel, tabPane;
-
+    let tabLabel, tabPane; //sidepane variables
+    let AcceptVenueUpdate, UpdateObject, RemoveObject; // Waze action variables
+    let language = SETTINGS.default.language;
     let mapScanResult = null; // Not yet used
     let chargingStationsInView = [];
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
-    let language = SETTINGS.default.language;
+    let selectedNetwork = null;
+    
 
     // -------------------------- Functions --------------------------------------------------
 
@@ -72,7 +80,13 @@
             popup = document.createElement("div");
             popup.id = "TEST-popup";
             popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
-            popup.innerHTML = `<h2>Edit Panel TEST</h>`;
+            let popupHTML = `<h1 style = "text-align: center">${STRINGS[language].edit}</h1>`;
+            
+            for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
+                
+                popupHTML += `<p>${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
+            }
+            
             document.getElementsByTagName("body")[0].append(popup);
         }
     }
@@ -94,7 +108,7 @@
 
         const selectNetwork = document.createElement("select");
         selectNetwork.id = "select-network";
-        selectNetwork.name = "provider";
+        selectNetwork.name = "network";
         selectNetwork.style = "width: 190px; margin-right: 10px; padding: 2px 0; text-align: center";
         networksFilter.appendChild(selectNetwork);
         selectNetwork.innerHTML = `<option value="default">${STRINGS[language].choose_network}</option>`;
@@ -108,13 +122,19 @@
         startEditButton.innerText = STRINGS[language].start_edit_all;
         startEditButton.addEventListener("click", () => {
 
-            W.accelerators.addAction(W.accelerators.Actions.toggleUpdateRequest);
             console.dir(chargingStationsWithUpdateRequests);
             chargingStationsWithUpdateRequests[0].attributes.venueUpdateRequests.pop();
             console.log("Actions:");
+            W.model.actionManager.add(AcceptVenueUpdate);
             console.dir(W.model.actionManager.getActions());
             console.log(W.model.actionManager.getActionsNum());
-            loadPopup();
+            selectedNetwork = selectNetwork.value;
+            if (!selectedNetwork === "default") {
+                loadPopup();
+            }
+            else{
+                selectNetwork.style.borderColor = red;
+            }
             //chargingStationsWithUpdateRequests[0].getVenueUpdateRequests()[0].setApproved(true);
         })
         networksFilter.appendChild(startEditButton);
@@ -246,7 +266,7 @@
 
     function initialize() {
 
-        // dertermine language
+        // dertermine language, default is English (en)
         const hyperlink = window.location.href;
         for (const key of Object.keys(STRINGS)) {
             const languageRegex = new RegExp(".*" + key + ".*", "");
@@ -257,15 +277,17 @@
        }
         DEBUG && console.log(SCRIPT_NAME + ": language: " + language);
 
-        WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, "Greasyfork Link", "Forum Link");
-
+        WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
+        AcceptVenueUpdate = require('Waze/Action/AcceptVenueUpdate');
+        UpdateObject = require('Waze/Action/UpdateObject');
+        RemoveObject = require('Waze/Action/RemoveObject');
+        
         let style = document.createElement("style");
         style.type = "text/css";
         style.append("#CSA-tab > * {margin-bottom: 0;}");
         style.append(".spacer {padding-bottom: 10px;}");
         style.append("#CSA-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
         style.append("#CSA-tab h2 {font-size: 1.1rem;}");
-        style.append("#CSA-tab > div > h2 {font-size: 1.1rem;}");
         document.getElementsByTagName("head")[0].appendChild(style);
 
         ({tabLabel, tabPane} = W.userscripts.registerSidebarTab("Charging-Station-Automat."));

@@ -36,6 +36,7 @@
     }
     const STRINGS = {
         "en": {
+            address: "address",
             charging_stations_found: "Charging stations found",
             choose_network: "Choose network",
             edit: "Edit",
@@ -48,6 +49,7 @@
             venue_no_street_name: "No street",
         },
         "de": {
+            address: "Adresse",
             charging_stations_found: "Ladestationen gefunden",
             choose_network: "Wähle Betreiber",
             edit: "Bearbeiten",
@@ -69,7 +71,7 @@
     let chargingStationsInView = [];
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
-    let selectedNetwork = null;
+    let selectedNetwork = "default";
     
 
     // -------------------------- Functions --------------------------------------------------
@@ -80,11 +82,20 @@
             popup = document.createElement("div");
             popup.id = "TEST-popup";
             popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
-            let popupHTML = `<h1 style = "text-align: center">${STRINGS[language].edit}</h1>`;
-            
+            let popupHTML = `<h1 style="text-align: center">${STRINGS[language].edit}</h1>`;
+                        
             for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
+                let contentWrapper = document.getElementById("content-wrapper");
+                if (contentWrapper) {
+                    popup.removeChild(contentWrapper);
+                }
+                contentWrapper = document.createElement("div");
+                contentWrapper.id = "content-wrapper";
                 
                 popupHTML += `<p>${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
+                popupHTML += `<p class="venue-property">${STRINGS[language].address}</p> <input type="text"></input>
+                if(i === chargingStationsWithUpdateRe)
+                
             }
             
             document.getElementsByTagName("body")[0].append(popup);

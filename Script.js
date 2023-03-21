@@ -14,7 +14,7 @@
 // Version history
 // v 0.1 - Initial version of the script
 
-/* global W, $, WazeWrap*/
+/* global W, $, WazeWrap, require, ts */
 
 
 (function() {
@@ -34,6 +34,8 @@
             language: "en",
         }
     }
+
+    // -------------------------- Strings for each supported language -----------------------
     const STRINGS = {
         "en": {
             access_type: "access type",
@@ -92,12 +94,21 @@
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
     let selectedNetwork = "default";
-    
+
+
+    // -------------------------- Style ------------------------------------------------------
+    let style = document.createElement("style");
+        style.type = "text/css";
+        style.append("#CSA-tab > * {margin-bottom: 0;}");
+        style.append(".spacer {padding-bottom: 10px;}");
+        style.append("#CSA-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
+        style.append("#CSA-tab h2 {font-size: 1.1rem;}");
+        document.getElementsByTagName("head")[0].appendChild(style);
 
     // -------------------------- Functions --------------------------------------------------
 
     function loadPopup() {
-        
+
         let defaultName = "";
         let defaultAlternativeName = "";
         let defaultDescription = "";
@@ -109,23 +120,25 @@
         let defaultWebsite = "";
         let defaultPhone = "";
         let defaultOpeningHours;
-        
+
         let popup = document.getElementById("edit-popup");
         if(!popup) {
             popup = document.createElement("div");
         }
         popup.id = "edit-popup";
-        popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
+        popup.style = "position: fixed; visibility: visible; top:100px; left: 600px; z-index: 50; width: 700px; heigth: 400px; background-color: #eeeee4";
         popup.innerHTML = `<h1 style="text-align: center">${STRINGS[language].edit}</h1>`;
+        document.getElementsByTagName("body")[0].appendChild(popup);
 
         const closeButton = document.createElement("button");
         closeButton.id = "close-button";
         closeButton.innerText = "close";
-        closeButton.style = "display: float";
+        closeButton.style = "position: absolute; top: 20px; right: 20px";
         popup.appendChild(closeButton);
 
         for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
 
+            W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[placeID].marker.lonlat);
             // key variables of current charging station
             //let address;
             let Name;
@@ -146,28 +159,29 @@
                 popup.removeChild(contentWrapper);
             }
             contentWrapper = document.createElement("div");
-            contentWrapper.id = "content-wrapper";                
+            contentWrapper.id = "content-wrapper";
+            contentWrapper.style.append(".venue-property-string {display: inline-block}");
             let popupHTML = `<p style="margin-botton: 30px">${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].address}:</p> <input type="text" id="venueAddressInput"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].name}: </p> <input type="text" id="venueNameInput" value="${defaultName}"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].alt_name}: </p> <input type="text" id="venueAltNameInput" value="${defaultAlternativeName}"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input id="venueDescriptionInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input id="venueLocationInVenueInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input id="venueCostInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input id="venuePaymentMethodsInput" type="text"></input>;
-            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input id="venueExternalProviderInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].access_type}: </p> <input id="venueAccessTypeInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].website}: </p> <input id="venueWebsiteInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].phone}: </p> <input id="venuePhoneInput" type="text"></input>;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].opening_hours}: </p> <input id="venueOpeningHoursInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].address}:</p> <input type="text" id="venueAddressInput"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].name}: </p> <input type="text" id="venueNameInput" value="${defaultName}"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].alt_name}: </p> <input type="text" id="venueAltNameInput" value="${defaultAlternativeName}"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input id="venueDescriptionInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input id="venueLocationInVenueInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input id="venueCostInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input id="venuePaymentMethodsInput" type="text"></input>`;
+            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input id="venueExternalProviderInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].access_type}: </p> <input id="venueAccessTypeInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].website}: </p> <input id="venueWebsiteInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].phone}: </p> <input id="venuePhoneInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].opening_hours}: </p> <input id="venueOpeningHoursInput" type="text"></input>`;
 
-            contentwrapper.innerHTML += popupHTML;
+            contentWrapper.innerHTML += popupHTML;
             popup.appendChild(contentWrapper);
             // ------------------------------ end variant 1----------------------------------------------------------------------
             document.getElementsByTagName("body")[0].append(popup);
-            
+
             const editSubmitButton = document.createElement("wz-button");
-            button.id = "edit-submit-button";
+            editSubmitButton.id = "edit-submit-button";
         }
     }
 
@@ -190,6 +204,7 @@
         selectNetwork.id = "select-network";
         selectNetwork.name = "network";
         selectNetwork.style = "width: 190px; margin-right: 10px; padding: 2px 0; text-align: center";
+        selectNetwork.addEventListener("click", () => {selectNetwork.style.borderColor = "black";}); // in case border is highlighted red before because input was missing
         networksFilter.appendChild(selectNetwork);
         selectNetwork.innerHTML = `<option value="default">${STRINGS[language].choose_network}</option>`;
         for (let i = 0; i < chargingStationNetworks.length; i++) {
@@ -201,21 +216,15 @@
         startEditButton.style = "size: sm";
         startEditButton.innerText = STRINGS[language].start_edit_all;
         startEditButton.addEventListener("click", () => {
-
-            console.dir(chargingStationsWithUpdateRequests);
-            chargingStationsWithUpdateRequests[0].attributes.venueUpdateRequests.pop();
-            console.log("Actions:");
-            W.model.actionManager.add(new AcceptVenueUpdate);
-            console.dir(W.model.actionManager.getActions());
-            console.log(W.model.actionManager.getActionsNum());
             selectedNetwork = selectNetwork.value;
-            if (!selectedNetwork === "default") {
+            console.log(selectedNetwork);
+
+            if (selectedNetwork !== "default") {
                 loadPopup();
             }
-            else{
-                selectNetwork.style.borderColor = red;
+            else {
+                selectNetwork.style.borderColor = "red";
             }
-            //chargingStationsWithUpdateRequests[0].getVenueUpdateRequests()[0].setApproved(true);
         })
         networksFilter.appendChild(startEditButton);
 
@@ -354,21 +363,10 @@
                 language = key;
                 break;
             }
-       }
+        }
         DEBUG && console.log(SCRIPT_NAME + ": language: " + language);
 
         WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
-        AcceptVenueUpdate = require('Waze/Action/AcceptVenueUpdate');
-        UpdateObject = require('Waze/Action/UpdateObject');
-        RemoveObject = require('Waze/Action/RemoveObject');
-        
-        let style = document.createElement("style");
-        style.type = "text/css";
-        style.append("#CSA-tab > * {margin-bottom: 0;}");
-        style.append(".spacer {padding-bottom: 10px;}");
-        style.append("#CSA-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
-        style.append("#CSA-tab h2 {font-size: 1.1rem;}");
-        document.getElementsByTagName("head")[0].appendChild(style);
 
         ({tabLabel, tabPane} = W.userscripts.registerSidebarTab("Charging-Station-Automat."));
         W.userscripts.waitForElementConnected(tabLabel).then(() => {

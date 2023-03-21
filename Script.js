@@ -36,30 +36,50 @@
     }
     const STRINGS = {
         "en": {
+            access_type: "access type",
             address: "address",
+            alt_name: "alternative name",
             charging_stations_found: "Charging stations found",
             choose_network: "Choose network",
+            cost: "cost",
+            description: "description",
             edit: "Edit",
+            location_in_venue: "location in venue",
+            name: "name",
             network: "Network",
             no_results_found: "No results found",
+            opening_hours: "opening hours",
+            payment_methods: "payment methods",
+            phone: "phone",
             scan_again: "Scan again",
             scan_area: "Scan area",
             start_edit_all: "edit all",
             venue_no_name: "No name",
             venue_no_street_name: "No street",
+            website: "website",
         },
         "de": {
+            access_type: "Art der Zufahrt",
             address: "Adresse",
+            alt_name: "Alternativname",
             charging_stations_found: "Ladestationen gefunden",
             choose_network: "Wähle Betreiber",
+            cost: "Kosten",
+            description: "Beschreibung",
             edit: "Bearbeiten",
+            location_in_venue: "Ort innerhalb eines anderen Orts",
+            name: "Name",
             network: "Betreiber",
             no_results_found: "Keine Ergebnisse",
+            opening_hours: "Öffnungszeiten",
+            payment_methods: "Zahlungsmethoden",
+            phone: "Telefon",
             scan_again: "Suche erneut",
             scan_area: "Suche im Gebiet",
             start_edit_all: "alle bearbeiten",
             venue_no_name: "Ohne Name",
             venue_no_street_name: "keine Straße",
+            website: "Website",
         }
     }
 
@@ -77,28 +97,77 @@
     // -------------------------- Functions --------------------------------------------------
 
     function loadPopup() {
-        let popup = document.getElementById("TEST-popup");
+        
+        let defaultName = "";
+        let defaultAlternativeName = "";
+        let defaultDescription = "";
+        let defaultLocationInVenue = "";
+        let defaultCost;
+        let defaultPaymentMethods;
+        let defaultExternalProviders;
+        let defaultAccessType;
+        let defaultWebsite = "";
+        let defaultPhone = "";
+        let defaultOpeningHours;
+        
+        let popup = document.getElementById("edit-popup");
         if(!popup) {
             popup = document.createElement("div");
-            popup.id = "TEST-popup";
-            popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
-            let popupHTML = `<h1 style="text-align: center">${STRINGS[language].edit}</h1>`;
-                        
-            for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
-                let contentWrapper = document.getElementById("content-wrapper");
-                if (contentWrapper) {
-                    popup.removeChild(contentWrapper);
-                }
-                contentWrapper = document.createElement("div");
-                contentWrapper.id = "content-wrapper";
-                
-                popupHTML += `<p>${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
-                popupHTML += `<p class="venue-property">${STRINGS[language].address}</p> <input type="text"></input>
-                if(i === chargingStationsWithUpdateRe)
-                
+        }
+        popup.id = "edit-popup";
+        popup.style = "position: fixed; visibility: visible; top: 500px; left: 500px; z-index: 50; width: 500px; heigth: 400px; background-color: grey";
+        popup.innerHTML = `<h1 style="text-align: center">${STRINGS[language].edit}</h1>`;
+
+        const closeButton = document.createElement("button");
+        closeButton.id = "close-button";
+        closeButton.innerText = "close";
+        closeButton.style = "display: float";
+        popup.appendChild(closeButton);
+
+        for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
+
+            // key variables of current charging station
+            //let address;
+            let Name;
+            let AlternativeName;
+            let Description;
+            let LocationInVenue;
+            let Cost;
+            let PaymentMethods;
+            let ExternalProviders;
+            let AccessType;
+            let Website;
+            let Phone;
+            let OpeningHours;
+
+            // ----------------------------variant 1, create panel with own input fields-----------------------------------------
+            let contentWrapper = document.getElementById("content-wrapper");
+            if (contentWrapper) {
+                popup.removeChild(contentWrapper);
             }
-            
+            contentWrapper = document.createElement("div");
+            contentWrapper.id = "content-wrapper";                
+            let popupHTML = `<p style="margin-botton: 30px">${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].address}:</p> <input type="text" id="venueAddressInput"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].name}: </p> <input type="text" id="venueNameInput" value="${defaultName}"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].alt_name}: </p> <input type="text" id="venueAltNameInput" value="${defaultAlternativeName}"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input id="venueDescriptionInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input id="venueLocationInVenueInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input id="venueCostInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input id="venuePaymentMethodsInput" type="text"></input>;
+            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input id="venueExternalProviderInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].access_type}: </p> <input id="venueAccessTypeInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].website}: </p> <input id="venueWebsiteInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].phone}: </p> <input id="venuePhoneInput" type="text"></input>;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].opening_hours}: </p> <input id="venueOpeningHoursInput" type="text"></input>;
+
+            contentwrapper.innerHTML += popupHTML;
+            popup.appendChild(contentWrapper);
+            // ------------------------------ end variant 1----------------------------------------------------------------------
             document.getElementsByTagName("body")[0].append(popup);
+            
+            const editSubmitButton = document.createElement("wz-button");
+            button.id = "edit-submit-button";
         }
     }
 
@@ -113,7 +182,7 @@
         resultsSidebar = document.createElement("div");
         resultsSidebar.id = "results-sidebar-state";
         tabPane.appendChild(resultsSidebar);
-        const networksFilter = document.createElement("fieldset");
+        const networksFilter = document.createElement("form");
         networksFilter.style = "margin-bottom: 30px;";
         resultsSidebar.appendChild(networksFilter);
 
@@ -136,7 +205,7 @@
             console.dir(chargingStationsWithUpdateRequests);
             chargingStationsWithUpdateRequests[0].attributes.venueUpdateRequests.pop();
             console.log("Actions:");
-            W.model.actionManager.add(AcceptVenueUpdate);
+            W.model.actionManager.add(new AcceptVenueUpdate);
             console.dir(W.model.actionManager.getActions());
             console.log(W.model.actionManager.getActionsNum());
             selectedNetwork = selectNetwork.value;

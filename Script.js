@@ -14,7 +14,7 @@
 // Version history
 // v 0.1 - Initial version of the script
 
-/* global W, $, WazeWrap, require, ts */
+/* global W, $, WazeWrap, require */
 
 
 (function() {
@@ -39,13 +39,14 @@
     const STRINGS = {
         "en": {
             access_type: "access type",
-            address: "address",
             alt_name: "alternative name",
             charging_stations_found: "Charging stations found",
             choose_network: "Choose network",
             cost: "cost",
+            decline_request: "decline request",
             description: "description",
             edit: "Edit",
+            house_number: "house number",
             location_in_venue: "location in venue",
             name: "name",
             network: "Network",
@@ -56,19 +57,21 @@
             scan_again: "Scan again",
             scan_area: "Scan area",
             start_edit_all: "edit all",
+            street: "street",
             venue_no_name: "No name",
             venue_no_street_name: "No street",
             website: "website",
         },
         "de": {
             access_type: "Art der Zufahrt",
-            address: "Adresse",
             alt_name: "Alternativname",
             charging_stations_found: "Ladestationen gefunden",
             choose_network: "Wähle Betreiber",
             cost: "Kosten",
+            decline_request: "Update ablehnen",
             description: "Beschreibung",
             edit: "Bearbeiten",
+            house_number: "Hausnummer",
             location_in_venue: "Ort innerhalb eines anderen Orts",
             name: "Name",
             network: "Betreiber",
@@ -79,6 +82,7 @@
             scan_again: "Suche erneut",
             scan_area: "Suche im Gebiet",
             start_edit_all: "alle bearbeiten",
+            street: "Straße",
             venue_no_name: "Ohne Name",
             venue_no_street_name: "keine Straße",
             website: "Website",
@@ -98,16 +102,25 @@
 
     // -------------------------- Style ------------------------------------------------------
     let style = document.createElement("style");
-        style.type = "text/css";
-        style.append("#CSA-tab > * {margin-bottom: 0;}");
-        style.append(".spacer {padding-bottom: 10px;}");
-        style.append("#CSA-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
-        style.append("#CSA-tab h2 {font-size: 1.1rem;}");
-        document.getElementsByTagName("head")[0].appendChild(style);
+    style.type = "text/css";
+    style.append("#csa-tab * {margin-bottom: 0}");
+    style.append(".spacer {padding-bottom: 10px;}");
+    style.append("#csa-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
+    style.append("#csa-tab h2 {font-size: 1.1rem;}");
+    style.append("#csa-edit-popup * {margin-bottom: 2px}");
+    style.append(".venue-property-string {display: inline-block; min-width: 150px}");
+    style.append(".wide-input {width: 50%}");
+    document.getElementsByTagName("head")[0].appendChild(style);
 
     // -------------------------- Functions --------------------------------------------------
 
     function loadPopup() {
+
+        const mouseClick = new MouseEvent("click", {
+            view: window,
+            bubbles: true,
+            cancelabel: true
+        });
 
         let defaultName = "";
         let defaultAlternativeName = "";
@@ -120,38 +133,38 @@
         let defaultWebsite = "";
         let defaultPhone = "";
         let defaultOpeningHours;
+        let chargingStationCounter = 1;
 
-        let popup = document.getElementById("edit-popup");
+        let popup = document.getElementById("csa-edit-popup");
         if(!popup) {
             popup = document.createElement("div");
         }
-        popup.id = "edit-popup";
-        popup.style = "position: fixed; visibility: visible; top:100px; left: 600px; z-index: 50; width: 700px; heigth: 400px; background-color: #eeeee4";
-        popup.innerHTML = `<h1 style="text-align: center">${STRINGS[language].edit}</h1>`;
+        popup.id = "csa-edit-popup";
+        popup.style = "position: fixed; visibility: visible; top:90px; left: 750px; z-index: 50; width: 40vw; max-width: 1000px; heigth: 400px; background-color: white; border-radius: 5px";
+        popup.innerHTML = `<h1 style=" margin: 15px 15px 0 15px; font-size: 1.5em; text-align: center">${STRINGS[language].edit}</h1>`;
         document.getElementsByTagName("body")[0].appendChild(popup);
 
         const closeButton = document.createElement("button");
         closeButton.id = "close-button";
         closeButton.innerText = "close";
         closeButton.style = "position: absolute; top: 20px; right: 20px";
+        closeButton.addEventListener("click", () => document.getElementsByTagName("body")[0].removeChild(popup));
         popup.appendChild(closeButton);
 
-        for (let i = 0; i < chargingStationsWithUpdateRequests.length; i++) {
+        drawPopupContent(chargingStationsWithUpdateRequests[0]);
 
-            W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[placeID].marker.lonlat);
-            // key variables of current charging station
-            //let address;
-            let Name;
-            let AlternativeName;
-            let Description;
-            let LocationInVenue;
-            let Cost;
-            let PaymentMethods;
-            let ExternalProviders;
-            let AccessType;
-            let Website;
-            let Phone;
-            let OpeningHours;
+        function drawPopupContent(currentChargingStationUpdateRequest) {
+            DEBUG && console.log(SCRIPT_NAME + ": popup drawn with following chargingStation");
+            DEBUG && console.dir(currentChargingStationUpdateRequest);
+            const venueStreetName = (currentChargingStationUpdateRequest.getAddress().getStreetName() !== null) ? currentChargingStationUpdateRequest.getAddress().getStreetName() : STRINGS[language].venue_no_name;
+            const venueHouseNumber = (currentChargingStationUpdateRequest.getAddress().getHouseNumber() !== null) ? currentChargingStationUpdateRequest.getAddress().getHouseNumber() : "";
+
+            // draw popup next to the native place update panel
+            W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[currentChargingStationUpdateRequest.attributes.id].marker.lonlat);
+
+            // accept PUR to edit
+            document.querySelector(`div[data-id="${currentChargingStationUpdateRequest.attributes.id}"]`).dispatchEvent(mouseClick);
+            document.querySelector(`input[id="approved-true"]`).dispatchEvent(mouseClick);
 
             // ----------------------------variant 1, create panel with own input fields-----------------------------------------
             let contentWrapper = document.getElementById("content-wrapper");
@@ -160,32 +173,71 @@
             }
             contentWrapper = document.createElement("div");
             contentWrapper.id = "content-wrapper";
-            style.append(".venue-property-string {display: inline-block}");
-            let popupHTML = `<p style="margin-botton: 30px">${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].address}:</p> <input type="text" id="venueAddressInput"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].name}: </p> <input type="text" id="venueNameInput" value="${defaultName}"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].alt_name}: </p> <input type="text" id="venueAltNameInput" value="${defaultAlternativeName}"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input type="text" id="venueDescriptionInput" value= ${defaultDescription}></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input type="text" id="venueLocationInVenueInput" value=${defaultLocationInVenue}></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input type="text" id="venueCostInput" value=${defaultCost}></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input type="text" id="venuePaymentMethodsInput" value=${defaultPaymentMethods}></input>`;
-            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input type="text" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].access_type}: </p> <input id="venueAccessTypeInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].website}: </p> <input id="venueWebsiteInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].phone}: </p> <input id="venuePhoneInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].opening_hours}: </p> <input id="venueOpeningHoursInput" type="text"></input>`;
+            contentWrapper.style="padding: 0 15px 15px 15px; text-align: left";
+            //style.append(".venue-property-string {display: inline-block}");
+            popup.appendChild(contentWrapper);
+            let popupHTML = `<p>${chargingStationCounter}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
+            popupHTML += `<hr class="spacer">`;
+            //top line is unique from style because two inputs for the address are placed in the same line
+            popupHTML += `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%" value="${venueStreetName}" />`;
+            popupHTML += `<span style="float: right; margin-right: 25px"><label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${venueHouseNumber}" /></span><br>`;
+
+            popupHTML += `<label for="venueNameInput" class="venue-property-string">${STRINGS[language].name}: </label> <input type="text" class="wide-input" id="venueNameInput" value="${defaultName}" /><<br>`;
+            popupHTML += `<label for="venueAltNameInput" class="venue-property-string">${STRINGS[language].alt_name}: </label> <input type="text" class="wide-input" id="venueAltNameInput" value="${defaultAlternativeName}" /><br>`;
+            popupHTML += `<label for="venueDescriptionInput" class="venue-property-string">${STRINGS[language].description}: </label> <input type="text" class="wide-input" id="venueDescriptionInput" value= ${defaultDescription} /><br>`;
+            popupHTML += `<label for="venueLocationInVenueInput" class="venue-property-string">${STRINGS[language].location_in_venue}: </label> <input type="text" class="wide-input" id="venueLocationInVenueInput" value=${defaultLocationInVenue} /><br>`;
+            popupHTML += `<label for="venueCostInput" class="venue-property-string">${STRINGS[language].cost}: </label> <input type="text" class="wide-input" id="venueCostInput" value=${defaultCost} /><br>`;
+            popupHTML += `<label for="venuePaymentMethodsInput" class="venue-property-string">${STRINGS[language].payment_methods}: </label> <input type="text" class="wide-input" id="venuePaymentMethodsInput" value=${defaultPaymentMethods} /><br>`;
+            //popupHTML += `<label for="venueExternalProviderInput" class="venue-property-string">${STRINGS[language].external_provider}: </label> <input type="text" class="wide-input" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
+            popupHTML += `<label for="venueAccessTypeInput" class="venue-property-string">${STRINGS[language].access_type}: </label> <input type="text" class="wide-input" id="venueAccessTypeInput"></input><br>`;
+            popupHTML += `<label for="venueWebsiteInput" class="venue-property-string">${STRINGS[language].website}: </label> <input type="text" class="wide-input" id="venueWebsiteInput" /><br>`;
+            popupHTML += `<label for="venuePhoneInput" class="venue-property-string">${STRINGS[language].phone}: </label> <input type="text" class="wide-input" id="venuePhoneInput" /><br>`;
+            popupHTML += `<label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="wide-input" id="venueOpeningHoursInput" />`;
 
             contentWrapper.innerHTML += popupHTML;
-            popup.appendChild(contentWrapper);
+
             // ------------------------------ end variant 1----------------------------------------------------------------------
-            document.getElementsByTagName("body")[0].append(popup);
+
 
             const editSubmitButton = document.createElement("wz-button");
             editSubmitButton.id = "edit-submit-button";
-            editSubmitButton.addEventHandeler("click", () => {
-                
-                
+            editSubmitButton.addEventHandler("click", () => {
+
+
+                // key variables of current charging station
+                const WMEstreetNameRowElement = document.getElementsByClassName("street-name-row")[0];
+                const WMEstreetNameInputElement = WMEstreetNameRowElement.getElementsByTagName("input")[0];
+                const WMEhouseNumberElement = document.querySelector(".house-number");
+                const WMEhouseNumberInputElement = WMEhouseNumberElement.querySelector("input");
+                let AlternativeName;
+                let Description;
+                let LocationInVenue;
+                let Cost;
+                let PaymentMethods;
+                let ExternalProviders;
+                let AccessType;
+                let Website;
+                let Phone;
+                let OpeningHours;
+
+
+                WMEstreetNameInputElement.value = document.getElementById("venueStreetInput").value; // street name
+                WMEhouseNumberInputElement = document.getElementById("venueStreetInput").value; // house number
             });
+
+            const declinePurButton = document.createElement("button");
+            declinePurButton.id = "decline-pur-button";
+            declinePurButton.innerText = STRINGS[language].decline_request;
+            declinePurButton.addEventListener("click", () => {
+                let deleteConfirmPopup = document.getElementById("csa-delete-confirm-popup");
+                if (!deleteConfirmPopup) {
+                    deleteConfirmPopup = document.createElement("div");
+                    deleteConfirmPopup.innerHTML = `[PLACEHOLDER] Are you sure to delete the request?`;
+                    document.getElementsByTagName("body")[0].appendChild(deleteConfirmPopup);
+                    // document.querySelector(`input[id="approved-false"]`).dispatchEvent(mouseClick);
+                }
+            });
+            contentWrapper.appendChild(declinePurButton);
         }
     }
 
@@ -264,7 +316,7 @@
                 `<tr style="border: 1px solid black;">
                      <td style="min-width: 25px; text-align: center; border-right: 1px solid black;">${i + 1}</td>`;
 
-            // adds the search results with name and street name / house number (if available)
+            // adds the search results with name and street name and house number (if available)
             tableHTML +=
                 `<td style="padding: 0 10px;">${venueName}<br><i>(${venueStreetName}${venueHouseNumber})</i></td></tr>`;
         }// end for
@@ -378,12 +430,12 @@
         });
 
         W.userscripts.waitForElementConnected(tabPane).then(() => {
-            // -------------------------create header that stays on top----------------------------------------
-            tabPane.id = "CSA-tab";
+            // ------------------------- create header that stays on top ----------------------------------------
+            tabPane.id = "csa-tab";
             tabPane.innerHTML = '<h1>CSA-Charging-Station-Automat.</h1>';
             tabPane.innerHTML += `<p>version: ${SCRIPT_VERSION}<br>by ${SCRIPT_AUTHOR}</p>`;
             tabPane.innerHTML += `<hr class="spacer">`;
-            // -------------------------create header that stays on top----------------------------------------
+            // ------------------------- end header -------------------------------------------------------------
 
             loadDefaultSidebar();
             DEBUG && console.log(SCRIPT_NAME + ": Initialized");

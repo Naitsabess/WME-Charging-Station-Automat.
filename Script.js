@@ -160,16 +160,16 @@
             }
             contentWrapper = document.createElement("div");
             contentWrapper.id = "content-wrapper";
-            contentWrapper.style.append(".venue-property-string {display: inline-block}");
+            style.append(".venue-property-string {display: inline-block}");
             let popupHTML = `<p style="margin-botton: 30px">${i + 1}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].address}:</p> <input type="text" id="venueAddressInput"></input>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].name}: </p> <input type="text" id="venueNameInput" value="${defaultName}"></input>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].alt_name}: </p> <input type="text" id="venueAltNameInput" value="${defaultAlternativeName}"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input id="venueDescriptionInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input id="venueLocationInVenueInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input id="venueCostInput" type="text"></input>`;
-            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input id="venuePaymentMethodsInput" type="text"></input>`;
-            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input id="venueExternalProviderInput" type="text"></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].description}: </p> <input type="text" id="venueDescriptionInput" value= ${defaultDescription}></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].location_in_venue}: </p> <input type="text" id="venueLocationInVenueInput" value=${defaultLocationInVenue}></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].cost}: </p> <input type="text" id="venueCostInput" value=${defaultCost}></input>`;
+            popupHTML += `<p class="venue-property-string">${STRINGS[language].payment_methods}: </p> <input type="text" id="venuePaymentMethodsInput" value=${defaultPaymentMethods}></input>`;
+            //popupHTML += `<p class="venue-property-string">${STRINGS[language].external_provider}: </p> <input type="text" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].access_type}: </p> <input id="venueAccessTypeInput" type="text"></input>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].website}: </p> <input id="venueWebsiteInput" type="text"></input>`;
             popupHTML += `<p class="venue-property-string">${STRINGS[language].phone}: </p> <input id="venuePhoneInput" type="text"></input>`;
@@ -182,6 +182,10 @@
 
             const editSubmitButton = document.createElement("wz-button");
             editSubmitButton.id = "edit-submit-button";
+            editSubmitButton.addEventHandeler("click", () => {
+                
+                
+            });
         }
     }
 

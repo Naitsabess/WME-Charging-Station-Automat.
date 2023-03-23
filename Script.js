@@ -158,7 +158,8 @@
             DEBUG && console.dir(currentChargingStationUpdateRequest);
             const venueStreetName = (currentChargingStationUpdateRequest.getAddress().getStreetName() !== null) ? currentChargingStationUpdateRequest.getAddress().getStreetName() : STRINGS[language].venue_no_name;
             const venueHouseNumber = (currentChargingStationUpdateRequest.getAddress().getHouseNumber() !== null) ? currentChargingStationUpdateRequest.getAddress().getHouseNumber() : "";
-
+            const venueName
+            
             // draw popup next to the native place update panel
             W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[currentChargingStationUpdateRequest.attributes.id].marker.lonlat);
 
@@ -181,24 +182,43 @@
             //top line is unique from style because two inputs for the address are placed in the same line
             popupHTML += `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%" value="${venueStreetName}" />`;
             popupHTML += `<span style="float: right; margin-right: 25px"><label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${venueHouseNumber}" /></span><br>`;
-
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-name" />`;
             popupHTML += `<label for="venueNameInput" class="venue-property-string">${STRINGS[language].name}: </label> <input type="text" class="wide-input" id="venueNameInput" value="${defaultName}" /><<br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-alternate-name" />`;
             popupHTML += `<label for="venueAltNameInput" class="venue-property-string">${STRINGS[language].alt_name}: </label> <input type="text" class="wide-input" id="venueAltNameInput" value="${defaultAlternativeName}" /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-description" />`;
             popupHTML += `<label for="venueDescriptionInput" class="venue-property-string">${STRINGS[language].description}: </label> <input type="text" class="wide-input" id="venueDescriptionInput" value= ${defaultDescription} /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-location-in-venue" />`;
             popupHTML += `<label for="venueLocationInVenueInput" class="venue-property-string">${STRINGS[language].location_in_venue}: </label> <input type="text" class="wide-input" id="venueLocationInVenueInput" value=${defaultLocationInVenue} /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-cost" />`;
             popupHTML += `<label for="venueCostInput" class="venue-property-string">${STRINGS[language].cost}: </label> <input type="text" class="wide-input" id="venueCostInput" value=${defaultCost} /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-payment-methods" />`;
             popupHTML += `<label for="venuePaymentMethodsInput" class="venue-property-string">${STRINGS[language].payment_methods}: </label> <input type="text" class="wide-input" id="venuePaymentMethodsInput" value=${defaultPaymentMethods} /><br>`;
+            // popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-external-provider" />`;
             //popupHTML += `<label for="venueExternalProviderInput" class="venue-property-string">${STRINGS[language].external_provider}: </label> <input type="text" class="wide-input" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-access-type" />`;
             popupHTML += `<label for="venueAccessTypeInput" class="venue-property-string">${STRINGS[language].access_type}: </label> <input type="text" class="wide-input" id="venueAccessTypeInput"></input><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-website" />`;
             popupHTML += `<label for="venueWebsiteInput" class="venue-property-string">${STRINGS[language].website}: </label> <input type="text" class="wide-input" id="venueWebsiteInput" /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-phone" />`;
             popupHTML += `<label for="venuePhoneInput" class="venue-property-string">${STRINGS[language].phone}: </label> <input type="text" class="wide-input" id="venuePhoneInput" /><br>`;
+            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-opening-hours" />`;
             popupHTML += `<label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="wide-input" id="venueOpeningHoursInput" />`;
 
             contentWrapper.innerHTML += popupHTML;
 
-            // ------------------------------ end variant 1----------------------------------------------------------------------
+            // ------------------------------ logic ----------------------------------------------------------------------
 
-
+            const checkboxDefaultVenueName = document.getElementById("checkbox-default-venue-name");
+            checkboxDefaultVenueName.addEventListener("click", () => {
+                if (checkboxDefaultVenueName.checked) {
+                    if (venueStreetName !== defaultName) {
+                        venueStreetName = defaultName;
+                        drawPopupContent(currentChargingStationUpdateRequest);
+                    }
+                }
+            })
+            
             const editSubmitButton = document.createElement("wz-button");
             editSubmitButton.id = "edit-submit-button";
             editSubmitButton.addEventHandler("click", () => {
@@ -224,7 +244,7 @@
                 WMEstreetNameInputElement.value = document.getElementById("venueStreetInput").value; // street name
                 WMEhouseNumberInputElement = document.getElementById("venueStreetInput").value; // house number
             });
-
+            // to-do: functionality not finished yet
             const declinePurButton = document.createElement("button");
             declinePurButton.id = "decline-pur-button";
             declinePurButton.innerText = STRINGS[language].decline_request;

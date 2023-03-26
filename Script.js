@@ -38,50 +38,80 @@
     // -------------------------- Strings for each supported language -----------------------
     const STRINGS = {
         "en": {
-            access_type: "access type",
-            alt_name: "alternative name",
+            access_type: "Access type",
+            alt_name: "Alternative name",
+            app: "app",
+            apply_and_next: "apply & next",
             charging_stations_found: "Charging stations found",
             choose_network: "Choose network",
-            cost: "cost",
+            cost: "Cost",
+            cost_type_unspecified: "unknown",
+            credit_card: "credit card",
+            debit_card: "debit card",
             decline_request: "decline request",
-            description: "description",
+            description: "Description",
             edit: "Edit",
-            house_number: "house number",
-            location_in_venue: "location in venue",
-            name: "name",
+            fee: "fee",
+            free: "free",
+            house_number: "House number",
+            location_in_venue: "Location in venue",
+            membership_card: "membership card",
+            name: "Name",
             network: "Network",
             no_results_found: "No results found",
-            opening_hours: "opening hours",
-            payment_methods: "payment methods",
-            phone: "phone",
+            none_left: "none left",
+            online_payment: "online payment",
+            opening_hours: "Opening hours",
+            other: "other",
+            payment_methods: "Payment methods",
+            phone: "Phone",
+            plugin_autocharge: "plug-in autocharge",
+            private: "private",
+            public: "public",
+            restricted: "restricted",
             scan_again: "Scan again",
             scan_area: "Scan area",
-            start_edit_all: "edit all",
-            street: "street",
+            start_edit: "edit",
+            street: "Street",
             venue_no_name: "No name",
             venue_no_street_name: "No street",
-            website: "website",
+            website: "Website",
         },
         "de": {
             access_type: "Art der Zufahrt",
             alt_name: "Alternativname",
+            app: "App",
+            apply_and_next: "anwenden & Nächster",
             charging_stations_found: "Ladestationen gefunden",
             choose_network: "Wähle Betreiber",
             cost: "Kosten",
+            cost_type_unspecified: "keine Angabe",
+            credit_card: "Kreditkarte",
+            debit_card: "Debitkarte",
             decline_request: "Update ablehnen",
             description: "Beschreibung",
             edit: "Bearbeiten",
+            fee: "kostenpflichtig",
+            free: "kostenlos",
             house_number: "Hausnummer",
             location_in_venue: "Ort innerhalb eines anderen Orts",
+            membership_card: "Mitgliedskarte",
             name: "Name",
             network: "Betreiber",
             no_results_found: "Keine Ergebnisse",
+            none_left: "keiner ausstehend",
+            online_payment: "Online-Bezahlung",
             opening_hours: "Öffnungszeiten",
+            other: "Andere",
             payment_methods: "Zahlungsmethoden",
             phone: "Telefon",
+            plugin_autocharge: "Plugin-autocharge",
+            private: "privat",
+            public: "öffentlich",
+            restricted: "beschränkt",
             scan_again: "Suche erneut",
             scan_area: "Suche im Gebiet",
-            start_edit_all: "alle bearbeiten",
+            start_edit: "bearbeiten",
             street: "Straße",
             venue_no_name: "Ohne Name",
             venue_no_street_name: "keine Straße",
@@ -91,30 +121,36 @@
 
     // -------------------------- Variables needed for functionality -------------------------
     let tabLabel, tabPane; //sidepane variables
-    let AcceptVenueUpdate, UpdateObject, RemoveObject; // Waze action variables
+    //let AcceptVenueUpdate, UpdateObject, RemoveObject; // Waze action variables
     let language = SETTINGS.default.language;
     let mapScanResult = null; // Not yet used
     let chargingStationsInView = [];
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
     let selectedNetwork = "default";
+    let chargingStationLocationMarkers = [];
 
 
     // -------------------------- Style ------------------------------------------------------
     let style = document.createElement("style");
     style.type = "text/css";
     style.append("#csa-tab * {margin-bottom: 0}");
-    style.append(".spacer {padding-bottom: 10px;}");
+    style.append(".spacer-variant-1 {padding-bottom: 10px;}");
+    style.append(".spacer-variant-2 {margin-top: 5px}");
     style.append("#csa-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
     style.append("#csa-tab h2 {font-size: 1.1rem;}");
+    style.append("#csa-edit-popup {position: fixed; top:80px; left: 750px; visibility: visible;  z-index: 50; width: 40%; max-width: 1000px; heigth: 400px; background-color: white; border-radius: 5px}");
     style.append("#csa-edit-popup * {margin-bottom: 2px}");
-    style.append(".venue-property-string {display: inline-block; min-width: 150px}");
-    style.append(".wide-input {width: 50%}");
+    style.append("#csa-edit-popup .contentWrapper {margin-top: 5px}");
+    style.append(".venue-property-string {margin-left: 5 px; display: inline-block; width: 150px}");
+    style.append("#csa-edit-popup input select {background-color: light-blue}");
+    style.append(".property-input {width: 40%}");
+    style.append("#csa-decline-confirm-popup {postion: absolute; top: 40%; left: 40%; visibility: visible; z-index: 51; width: 100px, background-color: white; box-shadow(2px, 2px, 2px, 1px, black)}");
     document.getElementsByTagName("head")[0].appendChild(style);
 
     // -------------------------- Functions --------------------------------------------------
 
-    function loadPopup() {
+    function initializePopup() {
 
         const mouseClick = new MouseEvent("click", {
             view: window,
@@ -122,45 +158,87 @@
             cancelabel: true
         });
 
-        let defaultName = "";
-        let defaultAlternativeName = "";
-        let defaultDescription = "";
-        let defaultLocationInVenue = "";
-        let defaultCost;
-        let defaultPaymentMethods;
-        let defaultExternalProviders;
-        let defaultAccessType;
-        let defaultWebsite = "";
-        let defaultPhone = "";
-        let defaultOpeningHours;
-        let chargingStationCounter = 1;
+        let chargingStationCounter = 0;
+        const chargingStationsBySelectedNetwork = Array.from(chargingStationsWithUpdateRequests.filter(obj => obj.attributes.categoryAttributes.CHARGING_STATION.network === selectedNetwork));
+        const totalChargingStationsBySelectedNetwork = chargingStationsBySelectedNetwork.length;
+
+        // for every attribute for which there's a default, set default to the value of the first venue processed
+        let defaultName = chargingStationsBySelectedNetwork[0].getName() ? chargingStationsBySelectedNetwork[0].getName() : "";
+        let defaultAlternativeName = chargingStationsBySelectedNetwork[0].attributes.aliases ? chargingStationsBySelectedNetwork[0].attributes.aliases[0] : []; // array, to-do: support multiple aliases
+        let defaultDescription = chargingStationsBySelectedNetwork[0].attributes.description ? chargingStationsBySelectedNetwork[0].attributes.description : "";
+        let defaultLocationInVenue = chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.locationInVenue
+            ? chargingStationsWithUpdateRequests[0].attributes.categoryAttributes.CHARGIN_STATION.locationInVenue
+            : "";
+        let defaultCost = chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.costType
+            ? (chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.costType === "FREE")
+                ? STRINGS[language].free
+                : (chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.costType === "FEE")
+                    ? STRINGS[language].fee
+                    : STRINGS[language].cost_type_unspecified
+            : STRINGS[language].cost_type_unspecified;
+        let defaultPaymentMethods = chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.paymentMethods
+            ? Array.from(chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.paymentMethods)
+            : []; // array
+        defaultPaymentMethods.forEach((elem, index) => {
+            if (elem === "APP") {
+                defaultPaymentMethods[index] = STRINGS[language].app;
+            } else if (elem === "CREDIT") {
+                defaultPaymentMethods[index] = STRINGS[language].credit_card;
+            } else if (elem === "DEBIT") {
+                defaultPaymentMethods[index] = STRINGS[language].debit_card;
+            } else if (elem === "ONLINE_PAYMENT") {
+                defaultPaymentMethods[index] = STRINGS[language].online_payment;
+            } else if (elem === "MEMBERSHIP_CARD") {
+                defaultPaymentMethods[index] = STRINGS[language].membership_card;
+            } else if (elem === "PLUG_IN_AUTO_CHARGE") {
+                defaultPaymentMethods[index] = STRINGS[language].plugin_autocharge;
+            } else if (elem === "OTHER"){
+                defaultPaymentMethods[index] = STRINGS[language].other
+            }
+            else {
+                throw new TypeError(SCRIPT_NAME + ": Could not process payment methods. Abort to prevent false data.");
+            }
+        })
+        //let defaultExternalProviders;
+        let defaultAccessType = chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.accessType
+            ? (chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.accessType === "PUBLIC")
+                ? STRINGS[language].public
+                : (chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.accessType === "RESTRICTED")
+                    ? STRINGS[language].restricted
+                    : STRINGS[language].private
+            : (() => {throw new TypeError(SCRIPT_NAME + ": Could not process access types. Abort to prevent false data.")});
+        let defaultWebsite = chargingStationsBySelectedNetwork[0].attributes.url ? chargingStationsBySelectedNetwork[0].attributes.url : "";
+        let defaultPhone = chargingStationsBySelectedNetwork[0].attributes.phone ? chargingStationsBySelectedNetwork[0].attributes.phone : "";
+        let defaultOpeningHours = (chargingStationsBySelectedNetwork[0].attributes.openingHours.length === 0) ? "" : Array.from(chargingStationsBySelectedNetwork[0].attributes.openingHours); // array
 
         let popup = document.getElementById("csa-edit-popup");
         if(!popup) {
             popup = document.createElement("div");
         }
         popup.id = "csa-edit-popup";
-        popup.style = "position: fixed; visibility: visible; top:90px; left: 750px; z-index: 50; width: 40vw; max-width: 1000px; heigth: 400px; background-color: white; border-radius: 5px";
-        popup.innerHTML = `<h1 style=" margin: 15px 15px 0 15px; font-size: 1.5em; text-align: center">${STRINGS[language].edit}</h1>`;
+        popup.innerHTML = `<h1 style=" margin-top: 5px; font-size: 1.5em; text-align: center">${STRINGS[language].edit}</h1>`; // popup header
         document.getElementsByTagName("body")[0].appendChild(popup);
 
         const closeButton = document.createElement("button");
         closeButton.id = "close-button";
         closeButton.innerText = "close";
-        closeButton.style = "position: absolute; top: 20px; right: 20px";
+        closeButton.style = "position: absolute; top: 15px; right: 20px";
         closeButton.addEventListener("click", () => document.getElementsByTagName("body")[0].removeChild(popup));
         popup.appendChild(closeButton);
 
-        drawPopupContent(chargingStationsWithUpdateRequests[0]);
+        // start loading content of the popup with first venue
+        drawPopupContent(chargingStationsBySelectedNetwork[0]);
 
         function drawPopupContent(currentChargingStationUpdateRequest) {
             DEBUG && console.log(SCRIPT_NAME + ": popup drawn with following chargingStation");
             DEBUG && console.dir(currentChargingStationUpdateRequest);
-            const venueStreetName = (currentChargingStationUpdateRequest.getAddress().getStreetName() !== null) ? currentChargingStationUpdateRequest.getAddress().getStreetName() : STRINGS[language].venue_no_name;
-            const venueHouseNumber = (currentChargingStationUpdateRequest.getAddress().getHouseNumber() !== null) ? currentChargingStationUpdateRequest.getAddress().getHouseNumber() : "";
-            const venueName
-            
-            // draw popup next to the native place update panel
+            chargingStationCounter++;
+
+            // combination of street name and house number is unique, load every time from current venue
+            const streetName = (currentChargingStationUpdateRequest.getAddress().getStreetName() !== null) ? currentChargingStationUpdateRequest.getAddress().getStreetName() : STRINGS[language].venue_no_name;
+            const houseNumber = (currentChargingStationUpdateRequest.getAddress().getHouseNumber() !== null) ? currentChargingStationUpdateRequest.getAddress().getHouseNumber() : "";
+
+            // center on the current venue
             W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[currentChargingStationUpdateRequest.attributes.id].marker.lonlat);
 
             // accept PUR to edit
@@ -177,87 +255,273 @@
             contentWrapper.style="padding: 0 15px 15px 15px; text-align: left";
             //style.append(".venue-property-string {display: inline-block}");
             popup.appendChild(contentWrapper);
-            let popupHTML = `<p>${chargingStationCounter}/${chargingStationsWithUpdateRequests.length}: ${selectedNetwork}</p>`;
-            popupHTML += `<hr class="spacer">`;
-            //top line is unique from style because two inputs for the address are placed in the same line
-            popupHTML += `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%" value="${venueStreetName}" />`;
-            popupHTML += `<span style="float: right; margin-right: 25px"><label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${venueHouseNumber}" /></span><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-name" />`;
-            popupHTML += `<label for="venueNameInput" class="venue-property-string">${STRINGS[language].name}: </label> <input type="text" class="wide-input" id="venueNameInput" value="${defaultName}" /><<br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-alternate-name" />`;
-            popupHTML += `<label for="venueAltNameInput" class="venue-property-string">${STRINGS[language].alt_name}: </label> <input type="text" class="wide-input" id="venueAltNameInput" value="${defaultAlternativeName}" /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-description" />`;
-            popupHTML += `<label for="venueDescriptionInput" class="venue-property-string">${STRINGS[language].description}: </label> <input type="text" class="wide-input" id="venueDescriptionInput" value= ${defaultDescription} /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-location-in-venue" />`;
-            popupHTML += `<label for="venueLocationInVenueInput" class="venue-property-string">${STRINGS[language].location_in_venue}: </label> <input type="text" class="wide-input" id="venueLocationInVenueInput" value=${defaultLocationInVenue} /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-cost" />`;
-            popupHTML += `<label for="venueCostInput" class="venue-property-string">${STRINGS[language].cost}: </label> <input type="text" class="wide-input" id="venueCostInput" value=${defaultCost} /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-payment-methods" />`;
-            popupHTML += `<label for="venuePaymentMethodsInput" class="venue-property-string">${STRINGS[language].payment_methods}: </label> <input type="text" class="wide-input" id="venuePaymentMethodsInput" value=${defaultPaymentMethods} /><br>`;
-            // popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-external-provider" />`;
-            //popupHTML += `<label for="venueExternalProviderInput" class="venue-property-string">${STRINGS[language].external_provider}: </label> <input type="text" class="wide-input" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-access-type" />`;
-            popupHTML += `<label for="venueAccessTypeInput" class="venue-property-string">${STRINGS[language].access_type}: </label> <input type="text" class="wide-input" id="venueAccessTypeInput"></input><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-website" />`;
-            popupHTML += `<label for="venueWebsiteInput" class="venue-property-string">${STRINGS[language].website}: </label> <input type="text" class="wide-input" id="venueWebsiteInput" /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-phone" />`;
-            popupHTML += `<label for="venuePhoneInput" class="venue-property-string">${STRINGS[language].phone}: </label> <input type="text" class="wide-input" id="venuePhoneInput" /><br>`;
-            popupHTML += `input text="checkbox" class="is-default-checkbox" id="checkbox-default-venue-opening-hours" />`;
-            popupHTML += `<label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="wide-input" id="venueOpeningHoursInput" />`;
 
-            contentWrapper.innerHTML += popupHTML;
+            const statusBar = document.createElement("p");
+            statusBar.id = "edit-status-bar";
+            statusBar.style = "font-weight: bold";
+            statusBar.innerHTML =`${chargingStationCounter}/${totalChargingStationsBySelectedNetwork}: ${selectedNetwork}
+            <hr class="spacer-variant-2">`;
+            contentWrapper.appendChild(statusBar);
+
+            const attributesForm = document.createElement("form");
+            attributesForm.id = "attributesForm";
+            contentWrapper.appendChild(attributesForm);
+
+            //top row is unique from style because two inputs for the address are placed in the same line
+            let popupHTML = `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%" value="${streetName}" />
+            <span style="float: right; margin-right: 25px"><label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${houseNumber}" /></span><br>`;
+
+            // other rows
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-name" style="clear: both" checked />
+            <label for="venueNameInput" class="venue-property-string">${STRINGS[language].name}: </label> <input type="text" class="property-input" id="venueNameInput" value="${defaultName}" /><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-alternative-name" checked />
+            <label for="venueAltNameInput" class="venue-property-string">${STRINGS[language].alt_name}: </label> <input type="text" class="property-input" id="venueAltNameInput" value="${defaultAlternativeName}" /><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-description" checked />
+            <label for="venueDescriptionInput" class="venue-property-string">${STRINGS[language].description}: </label> <textarea type="text" class="property-input" id="venueDescriptionInput" value= "${defaultDescription}"></textarea><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-location-in-venue" checked />
+            <label for="venueLocationInVenueInput" class="venue-property-string">${STRINGS[language].location_in_venue}: </label> <textarea type="text" class="property-input" id="venueLocationInVenueInput" value="${defaultLocationInVenue}"></textarea><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-cost" checked />
+            <label for="venueCostInput" class="venue-property-string">${STRINGS[language].cost}:</label>
+            <select class="property-input" id="venueCostInput" name="venueCost">
+            <option value="${STRINGS[language].cost_type_unspecified} ${(defaultCost === STRINGS[language].cost_type_unspecified) ? "selected" : ""}">${STRINGS[language].cost_type_unspecified}</option>
+            <option value="${STRINGS[language].free}" ${(defaultCost === STRINGS[language].free) ? "selected" : ""}>${STRINGS[language].free}</option>
+            <option value="${STRINGS[language].fee}" ${(defaultCost === STRINGS[language].fee) ? "selected" : ""}>${STRINGS[language].fee}</option></select><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-payment-methods" checked />
+            <label for="venuePaymentMethodsInput" class="venue-property-string" margin: auto">${STRINGS[language].payment_methods}: </label>
+            <select type="text" class="property-input" id="venuePaymentMethodsInput" name="venuePaymentMethods" value="${defaultPaymentMethods}" multiple>
+            <option value="${STRINGS[language].app}" ${defaultPaymentMethods.includes(STRINGS[language].app) ? "selected" : ""}>${STRINGS[language].app}</option>
+            <option value="${STRINGS[language].credit_card}" ${defaultPaymentMethods.includes(STRINGS[language].credit_card) ? "selected" : ""}>${STRINGS[language].credit_card}</option>
+            <option value="${STRINGS[language].debit_card}" ${defaultPaymentMethods.includes(STRINGS[language].debit_card) ? "selected" : ""}>${STRINGS[language].debit_card}</option>
+            <option value="${STRINGS[language].online_payment}" ${defaultPaymentMethods.includes(STRINGS[language].online_payment) ? "selected" : ""}>${STRINGS[language].online_payment}</option>
+            <option value="${STRINGS[language].membership_card}" ${defaultPaymentMethods.includes(STRINGS[language].membership_card) ? "selected" : ""}>${STRINGS[language].membership_card}</option>
+            <option value="${STRINGS[language].plugin_autocharge}" ${defaultPaymentMethods.includes(STRINGS[language].plugin_autocharge) ? "selected" : ""}>${STRINGS[language].plugin_autocharge}</option>
+            <option value="${STRINGS[language].other}" ${defaultPaymentMethods.includes(STRINGS[language].other) ? "selected" : ""}>${STRINGS[language].other}</option>
+            </select><br>`;
+            // popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-external-provider" />`;
+            //popupHTML += `<label for="venueExternalProviderInput" class="venue-property-string">${STRINGS[language].external_provider}: </label> <input type="text" class="property-input" id="venueExternalProviderInput" value=${defaultExternalProviders}></input>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-access-type" checked />
+            <label for="venueAccessTypeInput" class="venue-property-string">${STRINGS[language].access_type}: </label>
+            <select class="property-input" id="venueAccessTypeInput" name="venueAccessType">
+            <option value="${STRINGS[language].public}" ${(defaultAccessType === STRINGS[language].public) ? "selected" : ""}>${STRINGS[language].public}</option>
+            <option value="${STRINGS[language].restricted}" ${(defaultAccessType === STRINGS[language].restricted) ? "selected" : ""}>${STRINGS[language].restricted}</option>
+            <option value="${STRINGS[language].private}" ${(defaultAccessType === STRINGS[language].private) ? "selected" : ""}>${STRINGS[language].private}</option>
+            </select><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-website" checked />
+            <label for="venueWebsiteInput" class="venue-property-string">${STRINGS[language].website}: </label> <input type="text" class="property-input" id="venueWebsiteInput" value="${defaultWebsite}" /><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-phone" checked />
+            <label for="venuePhoneInput" class="venue-property-string">${STRINGS[language].phone}: </label> <input type="text" class="property-input" id="venuePhoneInput" value="${defaultPhone}" /><br>`;
+            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-opening-hours" checked />
+            <label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="property-input" id="venueOpeningHoursInput" value="${defaultOpeningHours}" /><br>`;
+
+            attributesForm.innerHTML = popupHTML;
+
+            // get variables for various input elements
+            const venueStreetInput = document.getElementById("venueStreetInput");
+            const venueHouseNumberInput = document.getElementById("venueHouseNumberInput");
+            const venueNameInput = document.getElementById("venueNameInput");
+            const venueAltNameInput = document.getElementById("venueAltNameInput");
+            const venueDescriptionInput = document.getElementById("venueDescriptionInput");
+            const venueLocationInVenueInput = document.getElementById("venueLocationInVenueInput");
+            const venueCostInput = document.getElementById("venueCostInput");
+            const venuePaymentMethodsInput = document.getElementById("venuePaymentMethodsInput");
+            const venueAccessTypeInput = document.getElementById("venueAccessTypeInput");
+            const venueWebsiteInput = document.getElementById("venueWebsiteInput");
+            const venuePhoneInput = document.getElementById("venuePhoneInput");
+            const venueOpeningHoursInput = document.getElementById("venueOpeningHoursInput");
 
             // ------------------------------ logic ----------------------------------------------------------------------
-
+            // -------------------- #1 resetting an input back to default if checkbox is checked -------------------------
             const checkboxDefaultVenueName = document.getElementById("checkbox-default-venue-name");
-            checkboxDefaultVenueName.addEventListener("click", () => {
+            checkboxDefaultVenueName.addEventListener("change", () => {
                 if (checkboxDefaultVenueName.checked) {
-                    if (venueStreetName !== defaultName) {
-                        venueStreetName = defaultName;
-                        drawPopupContent(currentChargingStationUpdateRequest);
+                    if (venueNameInput.value !== defaultName) {
+                        venueNameInput.value = defaultName;
                     }
                 }
-            })
-            
-            const editSubmitButton = document.createElement("wz-button");
-            editSubmitButton.id = "edit-submit-button";
-            editSubmitButton.addEventHandler("click", () => {
-
-
-                // key variables of current charging station
-                const WMEstreetNameRowElement = document.getElementsByClassName("street-name-row")[0];
-                const WMEstreetNameInputElement = WMEstreetNameRowElement.getElementsByTagName("input")[0];
-                const WMEhouseNumberElement = document.querySelector(".house-number");
-                const WMEhouseNumberInputElement = WMEhouseNumberElement.querySelector("input");
-                let AlternativeName;
-                let Description;
-                let LocationInVenue;
-                let Cost;
-                let PaymentMethods;
-                let ExternalProviders;
-                let AccessType;
-                let Website;
-                let Phone;
-                let OpeningHours;
-
-
-                WMEstreetNameInputElement.value = document.getElementById("venueStreetInput").value; // street name
-                WMEhouseNumberInputElement = document.getElementById("venueStreetInput").value; // house number
             });
+            const checkboxDefaultVenueAlternativeName = document.getElementById("checkbox-default-venue-alternative-name");
+            checkboxDefaultVenueAlternativeName.addEventListener("change", () => {
+                if (checkboxDefaultVenueAlternativeName.checked) {
+                    if (venueAltNameInput !== defaultAlternativeName) {
+                    venueAltNameInput.value = defaultAlternativeName;
+                    }
+                }
+            });
+             const checkboxDefaultVenueDescription = document.getElementById("checkbox-default-venue-description");
+            checkboxDefaultVenueDescription.addEventListener("change", () => {
+                if (checkboxDefaultVenueDescription.checked) {
+                    if (venueDescriptionInput.value !== defaultDescription) {
+                        venueDescriptionInput.value = defaultDescription;
+                    }
+                }
+            });
+            const checkboxDefaultVenueLocationInVenue = document.getElementById("checkbox-default-venue-location-in-venue");
+            checkboxDefaultVenueLocationInVenue.addEventListener("change", () => {
+                if (checkboxDefaultVenueLocationInVenue.checked) {
+                    if (venueLocationInVenueInput.value !== defaultLocationInVenue) {
+                        venueLocationInVenueInput.value = defaultLocationInVenue;
+                    }
+                }
+            });
+            const checkboxDefaultVenueCost = document.getElementById("checkbox-default-venue-cost");
+            checkboxDefaultVenueCost.addEventListener("change", () => {
+                if (checkboxDefaultVenueCost.checked) {
+                    if (venueCostInput.value !== defaultCost) {
+                        venueCostInput.value = defaultCost;
+                    }
+                }
+            });
+            const checkboxDefaultVenuePaymentMethods = document.getElementById("checkbox-default-venue-payment-methods");
+            checkboxDefaultVenuePaymentMethods.addEventListener("change", () => {
+                if (checkboxDefaultVenuePaymentMethods.checked) {
+                    if (venuePaymentMethodsInput.value !== defaultPaymentMethods) {
+                        venuePaymentMethodsInput.value = Array.from(defaultPaymentMethods);
+                    }
+                }
+            });
+            const checkboxDefaultVenueAccessType = document.getElementById("checkbox-default-venue-access-type");
+            checkboxDefaultVenueAccessType.addEventListener("change", () => {
+                if (checkboxDefaultVenueAccessType.checked) {
+                    if (venueAccessTypeInput.value !== defaultAccessType) {
+                        venueAccessTypeInput.value = defaultAccessType;
+                    }
+                }
+            });
+            const checkboxDefaultVenueWebsite = document.getElementById("checkbox-default-venue-website");
+            checkboxDefaultVenueWebsite.addEventListener("change", () => {
+                if (checkboxDefaultVenueWebsite.checked) {
+                    if (venueWebsiteInput.value !== defaultWebsite) {
+                        venueWebsiteInput.value = defaultWebsite;
+                    }
+                }
+            });
+            const checkboxDefaultVenuePhone = document.getElementById("checkbox-default-venue-phone");
+            checkboxDefaultVenuePhone.addEventListener("change", () => {
+                if (checkboxDefaultVenuePhone.checked) {
+                    if (venuePhoneInput.value !== defaultPhone) {
+                        venuePhoneInput.value = defaultPhone;
+                    }
+                }
+            });
+            const checkboxDefaultOpeningHours = document.getElementById("checkbox-default-venue-opening-hours");
+            checkboxDefaultVenuePhone.addEventListener("change", () => {
+                if (checkboxDefaultOpeningHours.checked) {
+                    venueOpeningHoursInput.value = Array.from(defaultOpeningHours);
+                }
+            })
+
+            // -------------------- #2 info box for various massages to the user ---------------------------------
+            // const popupMessageBox = document.cra
+
+            // -------------------- #3 buttons to proceed with next venue ----------------------------------------
+            const buttonWrapper = document.createElement("div");
+            buttonWrapper.style = "float: right; margin-right: 30px; margin-bottom: 20px";
+           popup.appendChild(buttonWrapper);
+
             // to-do: functionality not finished yet
             const declinePurButton = document.createElement("button");
             declinePurButton.id = "decline-pur-button";
             declinePurButton.innerText = STRINGS[language].decline_request;
             declinePurButton.addEventListener("click", () => {
-                let deleteConfirmPopup = document.getElementById("csa-delete-confirm-popup");
-                if (!deleteConfirmPopup) {
-                    deleteConfirmPopup = document.createElement("div");
-                    deleteConfirmPopup.innerHTML = `[PLACEHOLDER] Are you sure to delete the request?`;
-                    document.getElementsByTagName("body")[0].appendChild(deleteConfirmPopup);
+                let declineConfirmPopup = document.getElementById("csa-decline-confirm-popup");
+                if (!declineConfirmPopup) {
+                    declineConfirmPopup = document.createElement("div");
+                    declineConfirmPopup.id = "csa-decline-confirm-popup";
+                    declineConfirmPopup.innerHTML = `[PLACEHOLDER] Are you sure to delete the request?`;
+                    declineConfirmPopup.innerHTML += `<wz-button style="background-color: red; color: white">delete</wz-button>`;
+                    popup.appendChild(declineConfirmPopup);
                     // document.querySelector(`input[id="approved-false"]`).dispatchEvent(mouseClick);
                 }
             });
-            contentWrapper.appendChild(declinePurButton);
+            buttonWrapper.appendChild(declinePurButton);
+
+            // -------------------- #4 apply changes for current venue by pressing button -------------------------
+            const editSubmitButton = document.createElement("wz-button");
+            editSubmitButton.id = "edit-submit-button";
+            editSubmitButton.style = "margin-left: 20px";
+            if (chargingStationCounter < totalChargingStationsBySelectedNetwork) {
+                editSubmitButton.innerText = STRINGS[language].apply_and_next;
+            } else {
+                editSubmitButton.innerText = STRINGS[language].none_left;
+            }
+            editSubmitButton.addEventListener("click", () => {
+
+                // applying values
+                document.getElementsByClassName("w-icon w-icon-pencil-fill edit-button")[0].dispatchEvent(mouseClick);
+                // street name ---does not working yet----
+                // const WMEstreetNameInputShadow = document.querySelector("wz-autocomplete.street-name").shadowRoot;
+                // const WMEstreetNameInputNestedShadow = WMEstreetNameInputShadow.querySelector("wz-text-input").shadowRoot;
+                // WMEstreetNameInputNestedShadow.querySelector("input").value = venueStreetInput.value;
+
+                const WMEhouseNumberInput = document.getElementsByClassName("house-number")[0]; // house number
+                WMEhouseNumberInput.value = venueHouseNumberInput.value;
+                // close sub-form
+                document.getElementsByClassName("save-button")[0].dispatchEvent(mouseClick);
+
+                // name
+                const WMEnameInputShadow = document.getElementById("venue-edit-general").getElementsByClassName("form-group")[1].getElementsByTagName("wz-text-input")[0].shadowRoot;
+                WMEnameInputShadow.querySelector("input").value = venueNameInput.value;
+                // alternative name ---doesn't work yet---
+                // if(venueAltNameInput.value !== "") {
+                //     document.getElementsByClassName("aliases-add-new")[0].dispatchEvent(mouseClick);
+                //     const WMEalternativeNameInputShadow = document.getElementsByClassName("alias-item-edit-form")[0].getElementsByTagName("div")[0].getElementsByTagName("wz-text-input")[0].shadowRoot;
+                //     WMEalternativeNameInputShadow.querySelector("input").value = venueAltNameInput.value;
+                // }
+                // description
+                const WMEdescriptionInputShadow = document.querySelector('wz-textarea[name="description"]').shadowRoot;
+                WMEdescriptionInputShadow.querySelector("textarea").value = venueDescriptionInput.value;
+                // location in venue
+                const WMElocationInVenueInputShadow = document.getElementsByClassName("charging-station-location-in-venue-control")[0].getElementsByTagName("wz-textarea")[0].shadowRoot;
+                WMElocationInVenueInputShadow.querySelector("textarea").value = venueLocationInVenueInput.value;
+
+                // change to the tab with addtional information
+                const WMEtabShadow = document. getElementsByClassName("venue-edit-tabs")[0].shadowRoot;
+                WMEtabShadow.querySelector('.wz-tab-label:nth-of-type(3)').dispatchEvent(mouseClick);
+                // website
+                const WMEwebsiteInputShadow = document.getElementById("venue-url").shadowRoot;
+                WMEwebsiteInputShadow.querySelector("input").value = venueWebsiteInput.value;
+                // phone
+                const WMEphoneInputShadow = document.getElementById("venue-phone").shadowRoot;
+                WMEphoneInputShadow.querySelector("input").value = venuePhoneInput.value;
+
+                // Setting default value for each attribute if associated checkbox is checked
+                if (checkboxDefaultVenueName.checked) {
+                    defaultName = venueNameInput.value;
+                }
+                if (checkboxDefaultVenueAlternativeName.checked) {
+                    defaultAlternativeName = venueAltNameInput.value;
+                }
+                if (checkboxDefaultVenueDescription.checked) {
+                    defaultDescription = venueDescriptionInput.value;
+                }
+                if (checkboxDefaultVenueLocationInVenue.checked) {
+                    defaultLocationInVenue = venueLocationInVenueInput.value;
+                }
+                if (checkboxDefaultVenueCost.checked) {
+                    defaultCost = venueCostInput.value;
+                }
+                if (checkboxDefaultVenuePaymentMethods.checked) {
+                    defaultPaymentMethods = Array.from(venuePaymentMethodsInput.value);
+                }
+                if (checkboxDefaultVenueAccessType.checked) {
+                    defaultAccessType = venueAccessTypeInput.value;
+                }
+                if (checkboxDefaultVenueWebsite.checked) {
+                    defaultWebsite = venueWebsiteInput.value;
+                }
+                if (checkboxDefaultVenuePhone.checked) {
+                    defaultPhone = venuePhoneInput.value;
+                }
+                if (checkboxDefaultOpeningHours.checked) {
+                    venueOpeningHoursInput.value = Array.from(defaultOpeningHours);
+                }
+                // initiating new iteration with next venue, if not the last one
+                if (chargingStationCounter < totalChargingStationsBySelectedNetwork.length) {
+                    drawPopupContent(chargingStationsBySelectedNetwork[chargingStationCounter - 1]);
+                }
+            });
+            buttonWrapper.appendChild(editSubmitButton);
+
         }
     }
 
@@ -290,13 +554,13 @@
         const startEditButton = document.createElement("wz-button");
         startEditButton.id = "start-edit-button";
         startEditButton.style = "size: sm";
-        startEditButton.innerText = STRINGS[language].start_edit_all;
+        startEditButton.innerText = STRINGS[language].start_edit;
         startEditButton.addEventListener("click", () => {
             selectedNetwork = selectNetwork.value;
             console.log(selectedNetwork);
 
             if (selectedNetwork !== "default") {
-                loadPopup();
+                initializePopup();
             }
             else {
                 selectNetwork.style.borderColor = "red";
@@ -329,8 +593,8 @@
         // one row for each charging station entry
         for (let i = 0; i < chargingStationsInView.length; i++) {
             const venueName = (chargingStationsInView[i].getName() === null) ? STRINGS[language].venue_no_name : chargingStationsInView[i].getName();
-            const venueStreetName = (chargingStationsInView[i].getAddress().isEmptyStreet()) ? STRINGS[language].venue_no_street_name : chargingStationsInView[i].getAddress().getStreetName();
-            const venueHouseNumber = (chargingStationsInView[i].getAddress().getHouseNumber() === null) ? "" : " " + chargingStationsInView[i].getAddress().getHouseNumber();
+            const streetName = (chargingStationsInView[i].getAddress().isEmptyStreet()) ? STRINGS[language].venue_no_street_name : chargingStationsInView[i].getAddress().getStreetName();
+            const displayHouseNumber = (chargingStationsInView[i].getAddress().getHouseNumber() === null) ? "" : " " + chargingStationsInView[i].getAddress().getHouseNumber();
             // adds number at the beginn of the row with some styling
             tableHTML +=
                 `<tr style="border: 1px solid black;">
@@ -338,7 +602,7 @@
 
             // adds the search results with name and street name and house number (if available)
             tableHTML +=
-                `<td style="padding: 0 10px;">${venueName}<br><i>(${venueStreetName}${venueHouseNumber})</i></td></tr>`;
+                `<td style="padding: 0 10px;">${venueName}<br><i>(${streetName}${displayHouseNumber})</i></td></tr>`;
         }// end for
         tableHTML +=
             `</tbody>
@@ -360,10 +624,22 @@
         if(chargingStationNetworks.length !== 0) {
             chargingStationNetworks.length = 0;
         }
+        if(chargingStationLocationMarkers.length !== 0) {
+            chargingStationLocationMarkers.length = 0;
+        }
 
         chargingStationsInView = W.model.venues.getObjectArray().filter(obj => obj.isChargingStation() && obj.outOfScope === false);
         chargingStationNetworks = chargingStationsInView.map(obj => obj.attributes.categoryAttributes.CHARGING_STATION.network).filter((obj, index, array) => array.indexOf(obj) === index);
         chargingStationsWithUpdateRequests = chargingStationsInView.filter(obj => obj.hasUpdateRequests());
+
+        // ---------------------------------------------- TO-DO: throws error - needs fixing --------------------------------------
+        chargingStationsInView.forEach(elem => {
+            const array = [];
+            array.push(elem.attributes.id);
+            array.push(W.map.placeUpdatesLayer.featureMarkers[elem.attributes.id].marker.lonlat);
+            chargingStationLocationMarkers.push(array);
+        });
+        console.dir(chargingStationLocationMarkers);
 
         if (chargingStationsInView.length > 0) {
             DEBUG && console.log(SCRIPT_NAME + ": Map scan completed. Results found: ");
@@ -442,7 +718,7 @@
         }
         DEBUG && console.log(SCRIPT_NAME + ": language: " + language);
 
-        WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
+        //WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
 
         ({tabLabel, tabPane} = W.userscripts.registerSidebarTab("Charging-Station-Automat."));
         W.userscripts.waitForElementConnected(tabLabel).then(() => {
@@ -454,7 +730,7 @@
             tabPane.id = "csa-tab";
             tabPane.innerHTML = '<h1>CSA-Charging-Station-Automat.</h1>';
             tabPane.innerHTML += `<p>version: ${SCRIPT_VERSION}<br>by ${SCRIPT_AUTHOR}</p>`;
-            tabPane.innerHTML += `<hr class="spacer">`;
+            tabPane.innerHTML += `<hr class="spacer-variant-1">`;
             // ------------------------- end header -------------------------------------------------------------
 
             loadDefaultSidebar();

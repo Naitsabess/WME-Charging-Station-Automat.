@@ -41,25 +41,28 @@
             access_type: "Access type",
             alt_name: "Alternative name",
             app: "app",
-            apply_and_next: "apply & next",
             charging_stations_found: "Charging stations found",
             choose_network: "Choose network",
+            close: "Close",
             cost: "Cost",
             cost_type_unspecified: "unknown",
             credit_card: "credit card",
             debit_card: "debit card",
-            decline_request: "decline request",
+            // decline_request: "decline request", not needed
             description: "Description",
             edit: "Edit",
             fee: "fee",
             free: "free",
             house_number: "House number",
             location_in_venue: "Location in venue",
+            maximize: "maximize",
             membership_card: "membership card",
+            minimize: "minimize",
             name: "Name",
             network: "Network",
+            next: "next",
             no_results_found: "No results found",
-            none_left: "none left",
+            none_left_save: "none left - save",
             online_payment: "online payment",
             opening_hours: "Opening hours",
             other: "other",
@@ -81,25 +84,28 @@
             access_type: "Art der Zufahrt",
             alt_name: "Alternativname",
             app: "App",
-            apply_and_next: "anwenden & Nächster",
             charging_stations_found: "Ladestationen gefunden",
             choose_network: "Wähle Betreiber",
+            close: "schließen",
             cost: "Kosten",
             cost_type_unspecified: "keine Angabe",
             credit_card: "Kreditkarte",
             debit_card: "Debitkarte",
-            decline_request: "Update ablehnen",
+            // decline_request: "Update ablehnen", // not needed
             description: "Beschreibung",
             edit: "Bearbeiten",
             fee: "kostenpflichtig",
             free: "kostenlos",
             house_number: "Hausnummer",
             location_in_venue: "Ort innerhalb eines anderen Orts",
+            maximize: "maximieren",
             membership_card: "Mitgliedskarte",
+            minimize: "minimieren",
             name: "Name",
             network: "Betreiber",
+            next: "Nächster",
             no_results_found: "Keine Ergebnisse",
-            none_left: "keiner ausstehend",
+            none_left_save: "keiner ausstehend - speichern",
             online_payment: "Online-Bezahlung",
             opening_hours: "Öffnungszeiten",
             other: "Andere",
@@ -128,7 +134,7 @@
     let chargingStationsWithUpdateRequests = [];
     let chargingStationNetworks = [];
     let selectedNetwork = "default";
-    let chargingStationLocationMarkers = [];
+    let chargingStationLocationMarkers = {};
 
 
     // -------------------------- Style ------------------------------------------------------
@@ -139,18 +145,18 @@
     style.append(".spacer-variant-2 {margin-top: 5px}");
     style.append("#csa-tab > h1 {font-size: 1.3rem; margin-top: -20px;}");
     style.append("#csa-tab h2 {font-size: 1.1rem;}");
-    style.append("#csa-edit-popup {position: fixed; top:80px; left: 750px; visibility: visible;  z-index: 50; width: 40%; max-width: 1000px; heigth: 400px; background-color: white; border-radius: 5px}");
+    style.append("#csa-edit-popup {position: fixed; top:80px; left: 750px; visibility: visible; z-index: 50; width: 40%; max-width: 1000px; background-color: white; border-radius: 5px}");
     style.append("#csa-edit-popup * {margin-bottom: 2px}");
     style.append("#csa-edit-popup .contentWrapper {margin-top: 5px}");
     style.append(".venue-property-string {margin-left: 5 px; display: inline-block; width: 150px}");
-    style.append("#csa-edit-popup input select {background-color: light-blue}");
-    style.append(".property-input {width: 40%}");
-    style.append("#csa-decline-confirm-popup {postion: absolute; top: 40%; left: 40%; visibility: visible; z-index: 51; width: 100px, background-color: white; box-shadow(2px, 2px, 2px, 1px, black)}");
+    style.append('#csa-edit-popup input[type="checkbox"] {margin-right: 3px}');
+    style.append(".property-input {width: 60%}");
+    style.append("#csa-edit-popup footer {margin-left: 20px}");
     document.getElementsByTagName("head")[0].appendChild(style);
 
     // -------------------------- Functions --------------------------------------------------
 
-    function initializePopup() {
+    function initializeEditPopup() {
 
         const mouseClick = new MouseEvent("click", {
             view: window,
@@ -158,13 +164,14 @@
             cancelabel: true
         });
 
-        let chargingStationCounter = 0;
+        let chargingStationCounter = 1;
+        let popupMinimalized = false;
         const chargingStationsBySelectedNetwork = Array.from(chargingStationsWithUpdateRequests.filter(obj => obj.attributes.categoryAttributes.CHARGING_STATION.network === selectedNetwork));
         const totalChargingStationsBySelectedNetwork = chargingStationsBySelectedNetwork.length;
 
         // for every attribute for which there's a default, set default to the value of the first venue processed
         let defaultName = chargingStationsBySelectedNetwork[0].getName() ? chargingStationsBySelectedNetwork[0].getName() : "";
-        let defaultAlternativeName = chargingStationsBySelectedNetwork[0].attributes.aliases ? chargingStationsBySelectedNetwork[0].attributes.aliases[0] : []; // array, to-do: support multiple aliases
+        let defaultAlternativeName = (chargingStationsBySelectedNetwork[0].attributes.aliases.length === 0) ? "" : chargingStationsBySelectedNetwork[0].attributes.aliases[0]; // to-do: support multiple aliases
         let defaultDescription = chargingStationsBySelectedNetwork[0].attributes.description ? chargingStationsBySelectedNetwork[0].attributes.description : "";
         let defaultLocationInVenue = chargingStationsBySelectedNetwork[0].attributes.categoryAttributes.CHARGING_STATION.locationInVenue
             ? chargingStationsWithUpdateRequests[0].attributes.categoryAttributes.CHARGIN_STATION.locationInVenue
@@ -216,13 +223,30 @@
             popup = document.createElement("div");
         }
         popup.id = "csa-edit-popup";
-        popup.innerHTML = `<h1 style=" margin-top: 5px; font-size: 1.5em; text-align: center">${STRINGS[language].edit}</h1>`; // popup header
+        popup.innerHTML = `<h1 id="popup-heading" style=" margin-top: 5px; margin-bottom: 2px; font-size: 1.5em; text-align: center">${STRINGS[language].edit}</h1>`; // popup header
         document.getElementsByTagName("body")[0].appendChild(popup);
+
+        const minimizeButton = document.createElement("button");
+        minimizeButton.id = "minimize-button";
+        minimizeButton.innerText = STRINGS[language].minimize;
+        minimizeButton.style = "position: absolute; top: 15px; right: 105px";
+        minimizeButton.addEventListener("click", () => {
+            if (popupMinimalized === false) {
+                popup.style = `overflow: hidden; height: ${document.getElementById("popup-heading").offsetHeight + 12}px`;
+                minimizeButton.innerText = STRINGS[language].maximize;
+                popupMinimalized = true;
+            } else {
+                popup.style = `overflow: visible; height: "auto"`;
+                minimizeButton.innerText = STRINGS[language].minimize;
+                popupMinimalized = false;
+            }
+        });
+        popup.appendChild(minimizeButton);
 
         const closeButton = document.createElement("button");
         closeButton.id = "close-button";
-        closeButton.innerText = "close";
-        closeButton.style = "position: absolute; top: 15px; right: 20px";
+        closeButton.innerText = STRINGS[language].close;
+        closeButton.style = "position: absolute; top: 15px; right: 15px";
         closeButton.addEventListener("click", () => document.getElementsByTagName("body")[0].removeChild(popup));
         popup.appendChild(closeButton);
 
@@ -232,20 +256,22 @@
         function drawPopupContent(currentChargingStationUpdateRequest) {
             DEBUG && console.log(SCRIPT_NAME + ": popup drawn with following chargingStation");
             DEBUG && console.dir(currentChargingStationUpdateRequest);
-            chargingStationCounter++;
 
             // combination of street name and house number is unique, load every time from current venue
             const streetName = (currentChargingStationUpdateRequest.getAddress().getStreetName() !== null) ? currentChargingStationUpdateRequest.getAddress().getStreetName() : STRINGS[language].venue_no_name;
             const houseNumber = (currentChargingStationUpdateRequest.getAddress().getHouseNumber() !== null) ? currentChargingStationUpdateRequest.getAddress().getHouseNumber() : "";
 
             // center on the current venue
-            W.map.setCenter(W.map.placeUpdatesLayer.featureMarkers[currentChargingStationUpdateRequest.attributes.id].marker.lonlat);
+            W.map.setCenter(chargingStationLocationMarkers[currentChargingStationUpdateRequest.attributes.id]);
 
-            // accept PUR to edit
-            document.querySelector(`div[data-id="${currentChargingStationUpdateRequest.attributes.id}"]`).dispatchEvent(mouseClick);
-            document.querySelector(`input[id="approved-true"]`).dispatchEvent(mouseClick);
+            try {
+                // select venue on map
+                document.querySelector(`div[data-id="${currentChargingStationUpdateRequest.attributes.id}"]`).click();
+            } catch (error) {
+                WazeWrap.Alerts.error(SCRIPT_NAME, "Couldn't find charging station. Please zoom out.");
+                              // If pin data in WME is not available, reload popup
+            }
 
-            // ----------------------------variant 1, create panel with own input fields-----------------------------------------
             let contentWrapper = document.getElementById("content-wrapper");
             if (contentWrapper) {
                 popup.removeChild(contentWrapper);
@@ -268,8 +294,8 @@
             contentWrapper.appendChild(attributesForm);
 
             //top row is unique from style because two inputs for the address are placed in the same line
-            let popupHTML = `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%" value="${streetName}" />
-            <span style="float: right; margin-right: 25px"><label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${houseNumber}" /></span><br>`;
+            let popupHTML = `<label for="venueStreetInput">${STRINGS[language].street}:</label> <input type="text" id="venueStreetInput" style="width: 50%; margin-right: 40px" value="${streetName}" />
+            <label for="venueHouseNumberInput" style= "margin-right: 2px;">${STRINGS[language].house_number}:</label><input type="text" id="venueHouseNumberInput" style="width: 40px" value="${houseNumber}" /><br>`;
 
             // other rows
             popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-name" style="clear: both" checked />
@@ -310,8 +336,8 @@
             <label for="venueWebsiteInput" class="venue-property-string">${STRINGS[language].website}: </label> <input type="text" class="property-input" id="venueWebsiteInput" value="${defaultWebsite}" /><br>`;
             popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-phone" checked />
             <label for="venuePhoneInput" class="venue-property-string">${STRINGS[language].phone}: </label> <input type="text" class="property-input" id="venuePhoneInput" value="${defaultPhone}" /><br>`;
-            popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-opening-hours" checked />
-            <label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="property-input" id="venueOpeningHoursInput" value="${defaultOpeningHours}" /><br>`;
+            // popupHTML += `<input type="checkbox" class="is-default-checkbox" id="checkbox-default-venue-opening-hours" checked />
+            // <label for="venueOpeningHoursInput" class="venue-property-string">${STRINGS[language].opening_hours}: </label> <input type="text" class="property-input" id="venueOpeningHoursInput" value="${defaultOpeningHours}" /><br>`;
 
             attributesForm.innerHTML = popupHTML;
 
@@ -327,7 +353,7 @@
             const venueAccessTypeInput = document.getElementById("venueAccessTypeInput");
             const venueWebsiteInput = document.getElementById("venueWebsiteInput");
             const venuePhoneInput = document.getElementById("venuePhoneInput");
-            const venueOpeningHoursInput = document.getElementById("venueOpeningHoursInput");
+            //const venueOpeningHoursInput = document.getElementById("venueOpeningHoursInput");
 
             // ------------------------------ logic ----------------------------------------------------------------------
             // -------------------- #1 resetting an input back to default if checkbox is checked -------------------------
@@ -403,48 +429,28 @@
                     }
                 }
             });
-            const checkboxDefaultOpeningHours = document.getElementById("checkbox-default-venue-opening-hours");
-            checkboxDefaultVenuePhone.addEventListener("change", () => {
-                if (checkboxDefaultOpeningHours.checked) {
-                    venueOpeningHoursInput.value = Array.from(defaultOpeningHours);
-                }
-            })
 
-            // -------------------- #2 info box for various massages to the user ---------------------------------
-            // const popupMessageBox = document.cra
+            const editPopupFooter = document.createElement("footer");
+            contentWrapper.appendChild(editPopupFooter);
 
-            // -------------------- #3 buttons to proceed with next venue ----------------------------------------
-            const buttonWrapper = document.createElement("div");
-            buttonWrapper.style = "float: right; margin-right: 30px; margin-bottom: 20px";
-           popup.appendChild(buttonWrapper);
-
-            // to-do: functionality not finished yet
-            const declinePurButton = document.createElement("button");
-            declinePurButton.id = "decline-pur-button";
-            declinePurButton.innerText = STRINGS[language].decline_request;
-            declinePurButton.addEventListener("click", () => {
-                let declineConfirmPopup = document.getElementById("csa-decline-confirm-popup");
-                if (!declineConfirmPopup) {
-                    declineConfirmPopup = document.createElement("div");
-                    declineConfirmPopup.id = "csa-decline-confirm-popup";
-                    declineConfirmPopup.innerHTML = `[PLACEHOLDER] Are you sure to delete the request?`;
-                    declineConfirmPopup.innerHTML += `<wz-button style="background-color: red; color: white">delete</wz-button>`;
-                    popup.appendChild(declineConfirmPopup);
-                    // document.querySelector(`input[id="approved-false"]`).dispatchEvent(mouseClick);
-                }
-            });
-            buttonWrapper.appendChild(declinePurButton);
+            const userMessages = document.createElement("div");
+            userMessages.style = "display: inline-block; width: 380px";
+            userMessages.innerHTML = `<ul style="color: red"><li>check geometry</li>
+            <li>add external provider</li>
+            <li>add opening hours</li></ul>`;
+            editPopupFooter.appendChild(userMessages);
 
             // -------------------- #4 apply changes for current venue by pressing button -------------------------
             const editSubmitButton = document.createElement("wz-button");
             editSubmitButton.id = "edit-submit-button";
-            editSubmitButton.style = "margin-left: 20px";
+            editSubmitButton.style = "display: inline-block, margin-bottom: 10px; vertical-align: top";
             if (chargingStationCounter < totalChargingStationsBySelectedNetwork) {
-                editSubmitButton.innerText = STRINGS[language].apply_and_next;
+                editSubmitButton.innerText = STRINGS[language].next;
             } else {
-                editSubmitButton.innerText = STRINGS[language].none_left;
+                editSubmitButton.innerText = STRINGS[language].none_left_save;
             }
             editSubmitButton.addEventListener("click", () => {
+
 
                 // applying values
                 document.getElementsByClassName("w-icon w-icon-pencil-fill edit-button")[0].dispatchEvent(mouseClick);
@@ -512,16 +518,20 @@
                 if (checkboxDefaultVenuePhone.checked) {
                     defaultPhone = venuePhoneInput.value;
                 }
-                if (checkboxDefaultOpeningHours.checked) {
-                    venueOpeningHoursInput.value = Array.from(defaultOpeningHours);
-                }
+                // if (checkboxDefaultOpeningHours.checked) {
+                //     venueOpeningHoursInput.value = Array.from(defaultOpeningHours);
+                // }
                 // initiating new iteration with next venue, if not the last one
-                if (chargingStationCounter < totalChargingStationsBySelectedNetwork.length) {
+                if (chargingStationCounter < totalChargingStationsBySelectedNetwork) {
+                    chargingStationCounter++;
                     drawPopupContent(chargingStationsBySelectedNetwork[chargingStationCounter - 1]);
+                } else if (chargingStationCounter === totalChargingStationsBySelectedNetwork) {
+                    //const WMEsaveButton = document.getElementsByClassName("waze-icon-save")[0];
+                    console.log("TEST: WME should save");
                 }
             });
-            buttonWrapper.appendChild(editSubmitButton);
 
+            editPopupFooter.appendChild(editSubmitButton);
         }
     }
 
@@ -560,7 +570,7 @@
             console.log(selectedNetwork);
 
             if (selectedNetwork !== "default") {
-                initializePopup();
+                initializeEditPopup();
             }
             else {
                 selectNetwork.style.borderColor = "red";
@@ -624,22 +634,19 @@
         if(chargingStationNetworks.length !== 0) {
             chargingStationNetworks.length = 0;
         }
-        if(chargingStationLocationMarkers.length !== 0) {
-            chargingStationLocationMarkers.length = 0;
-        }
+        for (let property in chargingStationLocationMarkers) {
+            if (chargingStationLocationMarkers.hasOwnProperty(property)) {
+                delete chargingStationLocationMarkers[property];
+            }
+        };
 
         chargingStationsInView = W.model.venues.getObjectArray().filter(obj => obj.isChargingStation() && obj.outOfScope === false);
         chargingStationNetworks = chargingStationsInView.map(obj => obj.attributes.categoryAttributes.CHARGING_STATION.network).filter((obj, index, array) => array.indexOf(obj) === index);
         chargingStationsWithUpdateRequests = chargingStationsInView.filter(obj => obj.hasUpdateRequests());
 
-        // ---------------------------------------------- TO-DO: throws error - needs fixing --------------------------------------
         chargingStationsInView.forEach(elem => {
-            const array = [];
-            array.push(elem.attributes.id);
-            array.push(W.map.placeUpdatesLayer.featureMarkers[elem.attributes.id].marker.lonlat);
-            chargingStationLocationMarkers.push(array);
+            chargingStationLocationMarkers[elem.attributes.id] = W.map.placeUpdatesLayer.featureMarkers[elem.attributes.id].marker.lonlat; // contains an object named initialize with properties: lat, lon
         });
-        console.dir(chargingStationLocationMarkers);
 
         if (chargingStationsInView.length > 0) {
             DEBUG && console.log(SCRIPT_NAME + ": Map scan completed. Results found: ");
@@ -707,18 +714,20 @@
 
     function initialize() {
 
+        if (WazeWrap.ready) {
+            WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
+        }
+
         // dertermine language, default is English (en)
         const hyperlink = window.location.href;
         for (const key of Object.keys(STRINGS)) {
-            const languageRegex = new RegExp(".*" + key + ".*", "");
+            const languageRegex = new RegExp(".*/" + key + "/.*", "");
             if (languageRegex.test(hyperlink)) {
                 language = key;
                 break;
             }
         }
         DEBUG && console.log(SCRIPT_NAME + ": language: " + language);
-
-        //WazeWrap.Interface.ShowScriptUpdate("WME Charging.Station-Automat.", SCRIPT_VERSION, RELEASE_NOTES, GREASYFORK_LINK, FORUM_LINK);
 
         ({tabLabel, tabPane} = W.userscripts.registerSidebarTab("Charging-Station-Automat."));
         W.userscripts.waitForElementConnected(tabLabel).then(() => {
